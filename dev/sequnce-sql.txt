@@ -1,5 +1,58 @@
 DROP TABLE IF EXISTS MYCAT_SEQUENCE;  
 CREATE TABLE MYCAT_SEQUENCE (  name VARCHAR(50) NOT NULL,  current_value INT NOT NULL,  increment INT NOT NULL DEFAULT 100, PRIMARY KEY (name) ) ENGINE=InnoDB;
+DROP FUNCTION IF EXISTS mycat_seq_currval;  
+DELIMITER $  
+CREATE FUNCTION mycat_seq_currval (seq_name VARCHAR(50))  
+         RETURNS VARCHAR(64)  
+         LANGUAGE SQL  
+        DETERMINISTIC  
+        CONTAINS SQL  
+         SQL SECURITY DEFINER  
+         COMMENT ''  
+BEGIN  
+        DECLARE retval VARCHAR(64);
+        SET retval="-999999999,null";  
+        SELECT concat(CAST(current_value AS CHAR),",",CAST(increment AS CHAR) ) INTO retval   FROM MYCAT_SEQUENCE  WHERE name = seq_name;  
+        RETURN retval ; 
+END  
+$  
+DELIMITER ;  
+
+DROP FUNCTION IF EXISTS mycat_seq_nextval;  
+DELIMITER $  
+CREATE FUNCTION mycat_seq_nextval (seq_name VARCHAR(50))  
+         RETURNS VARCHAR(64)  
+         LANGUAGE SQL  
+         DETERMINISTIC  
+         CONTAINS SQL  
+         SQL SECURITY DEFINER  
+         COMMENT ''  
+BEGIN  
+         UPDATE MYCAT_SEQUENCE  
+                 SET current_value = current_value + increment  WHERE name = seq_name;  
+         RETURN currval(seq_name);  
+END  
+$  
+DELIMITER ; 
+DROP FUNCTION IF EXISTS mycat_seq_setval;  
+DELIMITER $  
+CREATE FUNCTION mycat_seq_setval (seq_name VARCHAR(50), value INTEGER)  
+         RETURNS VARCHAR(64)  
+        LANGUAGE SQL  
+        DETERMINISTIC  
+        CONTAINS SQL  
+        SQL SECURITY DEFINER  
+        COMMENT ''  
+BEGIN  
+         UPDATE MYCAT_SEQUENCE  
+                   SET current_value = value  
+                   WHERE name = seq_name;  
+         RETURN currval(seq_name);  
+END  
+$  
+DELIMITER ;  
+
+
 DROP FUNCTION IF EXISTS currval;  
 DELIMITER $  
 CREATE FUNCTION currval (seq_name VARCHAR(50))  
@@ -53,8 +106,8 @@ $
 DELIMITER ;  
 
 INSERT INTO MYCAT_SEQUENCE VALUES ('GLOBAL', 0, 100);
-SELECT SETVAL('GLOBAL', 1);
-SELECT CURRVAL('GLOBAL');
-SELECT NEXTVAL('GLOBAL');
+SELECT MYCAT_SEQ_SETVAL('GLOBAL', 1);
+SELECT MYCAT_SEQ_CURRVAL('GLOBAL');
+SELECT MYCAT_SEQ_NEXTVAL('GLOBAL');
 
 
